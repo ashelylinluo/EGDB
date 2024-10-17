@@ -1,0 +1,167 @@
+import pandas as pd
+import dash
+from dash import dcc, html
+from dash.dependencies import Input, Output
+import plotly.graph_objs as go
+import numpy as np
+import dash_bootstrap_components as dbc
+
+# Load the GWAS data
+data_file = "D:/20240222数据库/gwas/gwas.csv"
+data = pd.read_csv(data_file, encoding='utf-8')
+
+# Rename columns if necessary to match expected names
+data.rename(columns={
+    'SNP marker': 'SNP_marker',
+    'Chromosome': 'Chromosome',
+    'Position': 'Position',
+    'FDR': 'FDR',
+    'Trait': 'Trait'
+}, inplace=True)
+
+# Replace FDR values of 0 with a small value to avoid log(0)
+data['FDR'] = data['FDR'].replace(0, 1e-10)
+
+# Create the Dash app with Bootstrap theme
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+
+# Trait abbreviation mapping
+trait_mapping = {
+    "Yld": "Dry biomass yield",
+    "CC": "Compressed circumference",
+    "BC": "Basal Circumference",
+    "CmL": "Culm length",
+    "CmNdN": "Culm node number",
+    "CmDW": "Culm dry weight",
+    "IntL": "Internode length",
+    "CmV": "Culm volume",
+    "CmDW/V": "Culm Density",
+    "DBI": "Culm diameter at basal internode",
+    "DLI": "Culm diameter at last internode",
+    "TCmN": "Total number of culms",
+    "PRCm": "Proportion of reproductive culms",
+    "Cm/A": "Culms per area",
+    "HD1": "First heading date"
+}
+
+# Navbar
+navbar = dbc.NavbarSimple(
+    children=[
+        dbc.NavItem(dbc.NavLink("Home", href="#")),
+        dbc.NavItem(dbc.NavLink("About", href="#")),
+        dbc.NavItem(dbc.NavLink("Contact", href="#")),
+    ],
+    brand="Plant Database GWAS Visualization",
+    brand_href="#",
+    color="primary",
+    dark=True,
+)
+
+# Layout of the app
+app.layout = html.Div([
+    navbar,
+    dbc.Container([
+        html.H1("Interactive GWAS Visualization", className="text-center my-4"),
+        dbc.Row([
+            dbc.Col([
+                html.Label("Choose a species:"),
+                dcc.Dropdown(
+                    id='species-select',
+                    options=[
+                        {'label': 'All Species', 'value': 'all'},
+                        {'label': 'Miscanthus sacchariflorus', 'value': 'Miscanthus sacchariflorus'}
+                    ],
+                    value='all',
+                    className="mb-3"
+                ),
+                html.Label("Choose a trait:"),
+                dcc.Dropdown(
+                    id='trait-select',
+                    options=[{'label': name, 'value': abbrev} for abbrev, name in trait_mapping.items()],
+                    value=None,
+                    className="mb-3"
+                ),
+                dbc.Button("Search", id="search-button", color="primary", className="mt-3 w-100")
+            ], width=3),
+            dbc.Col([
+                dcc.Graph(id='manhattan-plot')
+            ], width=9)
+        ])
+    ], fluid=True)
+])
+
+# Callback to update the Manhattan plot based on dropdown selection
+@app.callback(
+    Output('manhattan-plot', 'figure'),
+    [Input('species-select', 'value'),
+     Input('trait-select', 'value'),
+     Input('search-button', 'n_clicks')]
+)
+def update_plot(species, trait, n_clicks):
+    # Filter the data based on the selected species and trait
+    if species == 'all' and trait is None:
+        filtered_data = data
+    elif species == 'all':
+        filtered_data = data[data['Trait'] == trait]
+    else:
+        filtered_data = data[(data['Species'] == species) & (data['Trait'] == trait)]
+
+    # Prepare data for Manhattan plot
+    fig = go.Figure()
+    
+    chromosomes = sorted(filtered_data['Chromosome'].unique())
+    colors = ['#1F77B4', '#FF7F0E', '#2CA02C', '#D62728', '#9467BD', '#8C564B', '#E377C2', '#7F7F7F', '#BCBD22', '#17BECF']
+    
+    cum_pos = 0
+    chr_positions = {}
+    for chromosome in chromosomes:
+        chr_data = filtered_data[filtered_data['Chromosome'] == chromosome]
+        chr_positions[chromosome] = cum_pos + chr_data['Position']
+        cum_pos += chr_data['Position'].max()
+
+    for i, chromosome in enumerate(chromosomes):
+        chr_data = filtered_data[filtered_data['Chromosome'] == chromosome]
+        fig.add_trace(go.Scatter(
+            x=chr_positions[chromosome],
+            y=-np.log10(chr_data['FDR']) + np.random.normal(0, 0.05, len(chr_data)),  # Add jitter
+            mode='markers',
+            name=f'Chromosome {chromosome}',
+            marker=dict(
+                size=3,  # Reduce marker size
+                color=colors[i % len(colors)],  # Use cycling colors
+                opacity=0.7  # Increase transparency
+            )
+        ))
+    
+    # Add threshold line
+    fig.add_shape(
+        type="line",
+        x0=0,
+        y0=8,  # Adjust threshold line position
+        x1=cum_pos,
+        y1=8,
+        line=dict(color="red", width=1, dash="dash"),
+    )
+
+    fig.update_layout(
+        title="GWAS Manhattan Plot",
+        xaxis_title="Chromosome",
+        yaxis_title="-log10(p)",
+        showlegend=False,  # Hide legend
+        height=600,
+        template="plotly_white",
+    )
+    
+    fig.update_xaxes(
+        tickmode='array',
+        tickvals=[(chr_positions[chr].min() + chr_positions[chr].max()) / 2 for chr in chromosomes],
+        ticktext=chromosomes
+    )
+    
+    fig.update_yaxes(range=[0, 15])  # Adjust y-axis range
+    
+    return fig
+
+# Run the Dash app
+if __name__ == '__main__':
+    app.run_server(debug=True)
