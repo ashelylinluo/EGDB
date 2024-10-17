@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TE Superfamilies and Classes Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #selection-container {
+            margin-bottom: 20px;
+        }
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>TE Superfamilies and Classes Visualization</h1>
+    <div id="selection-container">
+        <label for="species-select">Choose a species:</label>
+        <select id="species-select">
+            <option value="cenchrus_purpureus_purple">Cenchrus purpureus Purple</option>
+        </select>
+        <button onclick="loadCharts()">Show Charts</button>
+    </div>
+    <div>
+        <canvas id="barChart"></canvas>
+    </div>
+    <div id="pieChartContainer">
+        <canvas id="pieChart"></canvas>
+    </div>
+
+    <script>
+        function loadCharts() {
+            const filePath = "Cenchrus_purpureus_purple_modified_utf8.csv";
+
+            Papa.parse(filePath, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    console.log("CSV data loaded:", results);
+
+                    if (results.errors.length > 0) {
+                        console.error("Errors parsing CSV:", results.errors);
+                        alert("Errors occurred while parsing the CSV file. Check the console for details.");
+                        return;
+                    }
+
+                    console.log("Parsed CSV data:", results.data);
+
+                    if (results.data.length === 0) {
+                        console.error("Parsed CSV data is empty. Please check the file content.");
+                        alert("Parsed CSV data is empty. Please check the file content.");
+                        return;
+                    }
+
+                    const data = results.data;
+                    const labels = [];
+                    const counts = [];
+
+                    data.forEach((row, index) => {
+                        console.log(`Row ${index}:`, row);
+                        if (row['Class'] && row['Count']) {
+                            labels.push(row['Class']);
+                            counts.push(parseInt(row['Count'], 10));
+                        } else {
+                            console.warn(`Invalid row at index ${index}:`, row);
+                        }
+                    });
+
+                    if (labels.length > 0 && counts.length > 0) {
+                        console.log("Generating charts...");
+                        generateBarChart(labels, counts);
+                        generatePieChart(labels, counts);
+                    } else {
+                        console.error("No valid data found in CSV file.");
+                        alert("No valid data found in CSV file. Please check the file format and content.");
+                    }
+                },
+                error: function(error) {
+                    console.error("Error parsing CSV file:", error);
+                    alert("Error parsing CSV file. Please check the file path and content.");
+                }
+            });
+        }
+
+        function generateBarChart(labels, counts) {
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Number of Transposable Elements by Class',
+                        data: counts,
+                        backgroundColor: 'skyblue'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true
+                        },
+                        title: {
+                            display: true,
+                            text: 'Number of Transposable Elements by Class'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 0
+                            }
+                        },
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function generatePieChart(labels, counts) {
+            const pieCtx = document.getElementById('pieChart').getContext('2d');
+            new Chart(pieCtx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: labels.map(() => getRandomColor())
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true
+                        },
+                        title: {
+                            display: true,
+                            text: 'Distribution of Transposable Elements by Class'
+                        }
+                    }
+                }
+            });
+        }
+
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+    </script>
+</body>
+</html>
