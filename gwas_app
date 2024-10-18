@@ -28,19 +28,7 @@ data['FDR'] = data['FDR'].replace(0, 1e-10)
 
 # 定义页面布局
 app.layout = html.Div([
-    dbc.NavbarSimple(
-        children=[
-            dbc.NavItem(dbc.NavLink("Home", href="#")),
-            dbc.NavItem(dbc.NavLink("About", href="#")),
-            dbc.NavItem(dbc.NavLink("Contact", href="#")),
-        ],
-        brand="Plant Database GWAS Visualization",
-        brand_href="#",
-        color="primary",
-        dark=True,
-    ),
     dbc.Container([
-        html.H1("Interactive GWAS Visualization", className="text-center my-4"),
         dbc.Row([
             dbc.Col([
                 html.Label("Choose a species:"),
@@ -74,7 +62,16 @@ app.layout = html.Div([
                     value=None,
                     className="mb-3"
                 ),
-                dbc.Button("Search", id="search-button", color="primary", className="mt-3 w-100")
+                dbc.Button(
+                    "Search",
+                    id="search-button",
+                    className="mt-3 w-100",
+                    style={
+                        'backgroundColor': 'rgb(143, 174, 0)',  # 浅绿色按钮
+                        'border': 'none',
+                        'color': 'white'  # 使文字颜色为白色，便于阅读
+                    }
+                )
             ], width=3),
         ], className="mb-4"),
         dbc.Row([
@@ -90,7 +87,6 @@ app.layout = html.Div([
      Input('search-button', 'n_clicks')]
 )
 def update_plot(trait, n_clicks):
-    # 创建一个新的图形对象
     fig = go.Figure()
 
     if trait is None:
@@ -137,7 +133,7 @@ def update_plot(trait, n_clicks):
     fig.update_layout(
         title="GWAS Manhattan Plot",
         xaxis=dict(title="Chromosome", tickvals=tickvals, ticktext=ticktext, ticks='outside',
-                   ticklen=10, tickwidth=2, linecolor='black', 
+                   ticklen=10, tickwidth=2, linecolor='black',
                    title_font=dict(family="Times New Roman", size=18, color="black", weight="bold"),
                    tickfont=dict(family="Times New Roman", size=14, color="black")),
         yaxis=dict(title="-log10(p)", ticks='outside', ticklen=10, tickwidth=2, linecolor='black',
