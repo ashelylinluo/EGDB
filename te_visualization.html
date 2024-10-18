@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TE Superfamilies and Classes Visualization</title>
+    <title>TE Superfamilies and Families Visualization</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
@@ -21,7 +21,7 @@
     </style>
 </head>
 <body>
-    <h1>TE Superfamilies and Classes Visualization</h1>
+    <h1>TE Superfamilies and Families Visualization</h1>
     <div id="selection-container">
         <label for="species-select">Choose a species:</label>
         <select id="species-select">
@@ -67,8 +67,8 @@
 
                     data.forEach((row, index) => {
                         console.log(`Row ${index}:`, row);
-                        if (row['Class'] && row['Count']) {
-                            labels.push(row['Class']);
+                        if (row['TE family'] && row['Count']) {
+                            labels.push(row['TE family']);
                             counts.push(parseInt(row['Count'], 10));
                         } else {
                             console.warn(`Invalid row at index ${index}:`, row);
@@ -98,7 +98,7 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Number of Transposable Elements by Class',
+                        label: 'Number of Transposable Elements by Family',
                         data: counts,
                         backgroundColor: 'skyblue'
                     }]
@@ -111,7 +111,7 @@
                         },
                         title: {
                             display: true,
-                            text: 'Number of Transposable Elements by Class'
+                            text: 'Number of Transposable Elements by Family'
                         }
                     },
                     scales: {
@@ -148,7 +148,7 @@
                         },
                         title: {
                             display: true,
-                            text: 'Distribution of Transposable Elements by Class'
+                            text: 'Distribution of Transposable Elements by Family'
                         }
                     }
                 }
