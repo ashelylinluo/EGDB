@@ -46,18 +46,10 @@
             margin-bottom: 20px;
             padding: 15px;
         }
-        .debug-info {
-            background-color: #e9e9e9;
-            padding: 10px;
-            margin-top: 20px;
-            border-radius: 5px;
-        }
     </style>
 </head>
 <body>
     <div class="container">
-        
-
         <div class="content">
             <div class="sidebar">
                 <div class="search-container" style="margin-bottom: 20px;">
@@ -86,11 +78,6 @@
                 </div>
             </div>
         </div>
-
-        <div class="debug-info">
-            <h3>Debug Information:</h3>
-            <pre id="debug-output"></pre>
-        </div>
     </div>
 
     <script>
@@ -113,25 +100,19 @@
         let types = new Set();
         let charts = {};
 
-        // Automatically load CSV file
         document.addEventListener('DOMContentLoaded', function() {
             loadCSV();
         });
 
         function loadCSV() {
-            const filePath = 'http://localhost:8000/202401018phenotype.csv';  // Automatically load CSV file path
-            updateDebugInfo('Attempting to load CSV from: ' + filePath);
+            const filePath = 'http://localhost:8000/202401018phenotype.csv';
             Papa.parse(filePath, {
                 download: true,
                 header: true,
                 skipEmptyLines: true,
                 complete: function(results) {
                     csvData = results.data;
-                    updateDebugInfo('CSV loaded successfully. Row count: ' + csvData.length);
                     processCSVData();
-                },
-                error: function(error) {
-                    updateDebugInfo('Error loading CSV: ' + error);
                 }
             });
         }
@@ -178,27 +159,21 @@
         function updateCharts() {
             const selectedTraits = Array.from(document.querySelectorAll('#trait-filters input:checked')).map(input => input.value);
             if (selectedTraits.length > 0) {
-                updateDebugInfo('Generating charts for selected traits...');
                 updatePairplot(selectedTraits, csvData);
                 updateGroupedBarChart(selectedTraits, csvData);
-            } else {
-                updateDebugInfo('Please select at least one trait to generate the charts.');
             }
         }
 
         function updateGroupedBarChart(selectedTraits, data) {
-            updateDebugInfo('Updating grouped bar chart with selected traits: ' + selectedTraits.join(', '));
             const ctx = document.getElementById('groupedBarChartCanvas').getContext('2d');
             if (charts.groupedBarChart) charts.groupedBarChart.destroy();
 
             const labels = Array.from(new Set(data.map(row => row['Type'])));
-            updateDebugInfo('Labels for grouped bar chart: ' + labels.join(', '));
             const datasets = selectedTraits.map(trait => {
                 const datasetValues = labels.map(label => {
                     const filteredData = data.filter(row => row['Type'] === label);
                     const values = filteredData.map(row => parseFloat(row[trait])).filter(val => !isNaN(val));
                     const averageValue = values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
-                    updateDebugInfo(`Trait: ${trait}, Label: ${label}, Average Value: ${averageValue}`);
                     return averageValue;
                 });
                 return {
@@ -259,9 +234,6 @@
                     const dataset = data.map(row => {
                         const x = parseFloat(row[traitX]);
                         const y = parseFloat(row[traitY]);
-                        if (isNaN(x) || isNaN(y)) {
-                            updateDebugInfo(`Skipping row due to invalid data for traits: ${traitX}, ${traitY}`);
-                        }
                         return { x, y };
                     }).filter(pair => !isNaN(pair.x) && !isNaN(pair.y));
 
@@ -313,11 +285,6 @@
                     });
                 });
             });
-        }
-
-        function updateDebugInfo(message) {
-            const debugOutput = document.getElementById('debug-output');
-            debugOutput.textContent += message + '\n';
         }
     </script>
 </body>
