@@ -14,14 +14,24 @@
         #selection-container {
             margin-bottom: 20px;
         }
-        canvas {
-            max-width: 100%;
-            height: auto;
+        #charts-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .chart-wrapper {
+            width: 48%;
+        }
+        #barChart {
+            height: 750px !important;
+        }
+        #pieChart {
+            height: 800px !important;
         }
     </style>
 </head>
 <body>
-    <h1>TE Superfamilies and Families Visualization</h1>
+    <h1>TE Annotation and Visualization</h1>
     <div id="selection-container">
         <label for="species-select">Choose a species:</label>
         <select id="species-select">
@@ -29,11 +39,13 @@
         </select>
         <button onclick="loadCharts()">Show Charts</button>
     </div>
-    <div>
-        <canvas id="barChart"></canvas>
-    </div>
-    <div id="pieChartContainer">
-        <canvas id="pieChart"></canvas>
+    <div id="charts-container">
+        <div class="chart-wrapper">
+            <canvas id="barChart"></canvas>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="pieChart"></canvas>
+        </div>
     </div>
 
     <script>
@@ -100,6 +112,7 @@
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     plugins: {
                         legend: {
                             display: true
@@ -113,7 +126,7 @@
                         x: {
                             ticks: {
                                 maxRotation: 45,
-                                minRotation: 0
+                                minRotation: 45
                             }
                         },
                         y: {
@@ -137,13 +150,15 @@
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            display: true
+                            display: true,
+                            position: 'right'
                         },
                         title: {
                             display: true,
-                            text: 'Distribution of Transposable Elements by Family'
+                            text: 'Proportion of Transposable Elements by Family'
                         }
                     }
                 }
