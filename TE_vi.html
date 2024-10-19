@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TE Superfamilies and Families Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #selection-container {
+            margin-bottom: 20px;
+        }
+        #charts-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .chart-wrapper {
+            width: 48%;
+        }
+        #barChart {
+            height: 750px !important;
+        }
+        #pieChart {
+            height: 800px !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>TE Annotation and Visualization</h1>
+    <div id="selection-container">
+        <label for="species-select">Choose a species:</label>
+        <select id="species-select">
+            <option value="setaria_viridis_pie.csv">Setaria viridis</option>
+            <option value="miscanthus_sinensis_pie.csv">Miscanthus sinensis</option>
+            <option value="miscanthus_lutarioriparius_pie.csv">Miscanthus lutarioriparius</option>
+            <option value="cenchrus_purpureus_pie.csv">Cenchrus purpureus</option>
+            <option value="cenchrus_fungigraminus_pie.csv">Cenchrus fungigraminus</option>
+            <option value="cenchrus_purpureus_purple_pie.csv">Cenchrus purpureus Purple</option>
+        </select>
+        <button onclick="loadCharts()">Show Charts</button>
+    </div>
+    <div id="charts-container">
+        <div class="chart-wrapper">
+            <canvas id="barChart"></canvas>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="pieChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let barChartInstance = null;
+        let pieChartInstance = null;
+
+        function loadCharts() {
+            const speciesSelect = document.getElementById('species-select');
+            const filePath = "./" + speciesSelect.value;
+
+            Papa.parse(filePath, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    console.log("CSV data loaded:", results);
+
+                    if (results.errors.length > 0) {
+                        console.error("Errors parsing CSV:", results.errors);
+                        alert("Errors occurred while parsing the CSV file. Check the console for details.");
+                        return;
+                    }
+
+                    console.log("Parsed CSV data:", results.data);
+
+                    if (results.data.length === 0) {
+                        console.error("Parsed CSV data is empty. Please check the file content.");
+                        alert("Parsed CSV data is empty. Please check the file content.");
+                        return;
+                    }
+
+                    let data = results.data;
+                    data = data.map(row => ({ label: row['TE family'], count: parseInt(row['Count'], 10) }))
+                                .filter(row => !isNaN(row.count))
+                                .sort((a, b) => b.count - a.count);
+
+                    const labels = data.map(row => row.label);
+                    const counts = data.map(row => row.count);
+                    const colors = generateColors(labels.length);
+
+                    if (labels.length > 0 && counts.length > 0) {
+                        console.log("Generating charts...");
+                        generateBarChart(labels, counts, colors);
+                        generatePieChart(labels, counts, colors);
+                    } else {
+                        console.error("No valid data found in CSV file.");
+                        alert("No valid data found in CSV file. Please check the file format and content.");
+                    }
+                },
+                error: function(error) {
+                    console.error("Error parsing CSV file:", error);
+                    alert("Error parsing CSV file. Please check the file path and content.");
+                }
+            });
+        }
+
+        function generateBarChart(labels, counts, colors) {
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            if (barChartInstance) {
+                barChartInstance.destroy();
+            }
+            barChartInstance = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: colors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Number of Transposable Elements by Family'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        },
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function generatePieChart(labels, counts, colors) {
+            const pieCtx = document.getElementById('pieChart').getContext('2d');
+            if (pieChartInstance) {
+                pieChartInstance.destroy();
+            }
+            pieChartInstance = new Chart(pieCtx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: colors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'right'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Proportion of Transposable Elements by Family'
+                        }
+                    }
+                }
+            });
+        }
+
+        function generateColors(length) {
+            const colors = [];
+            const baseColors = [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'
+            ];
+            for (let i = 0; i < length; i++) {
+                colors.push(baseColors[i % baseColors.length]);
+            }
+            return colors;
+        }
+    </script>
+</body>
+</html>
