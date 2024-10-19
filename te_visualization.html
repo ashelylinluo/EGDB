@@ -38,7 +38,7 @@
 
     <script>
         function loadCharts() {
-            const filePath = "Cenchrus_purpureus_purple_modified_utf8.csv";
+            const filePath = "./Cenchrus_purpureus_purple_pie.csv";
 
             Papa.parse(filePath, {
                 download: true,
@@ -61,24 +61,19 @@
                         return;
                     }
 
-                    const data = results.data;
-                    const labels = [];
-                    const counts = [];
+                    let data = results.data;
+                    data = data.map(row => ({ label: row['TE family'], count: parseInt(row['Count'], 10) }))
+                                .filter(row => !isNaN(row.count))
+                                .sort((a, b) => b.count - a.count);
 
-                    data.forEach((row, index) => {
-                        console.log(`Row ${index}:`, row);
-                        if (row['TE family'] && row['Count']) {
-                            labels.push(row['TE family']);
-                            counts.push(parseInt(row['Count'], 10));
-                        } else {
-                            console.warn(`Invalid row at index ${index}:`, row);
-                        }
-                    });
+                    const labels = data.map(row => row.label);
+                    const counts = data.map(row => row.count);
+                    const colors = generateColors(labels.length);
 
                     if (labels.length > 0 && counts.length > 0) {
                         console.log("Generating charts...");
-                        generateBarChart(labels, counts);
-                        generatePieChart(labels, counts);
+                        generateBarChart(labels, counts, colors);
+                        generatePieChart(labels, counts, colors);
                     } else {
                         console.error("No valid data found in CSV file.");
                         alert("No valid data found in CSV file. Please check the file format and content.");
@@ -91,7 +86,7 @@
             });
         }
 
-        function generateBarChart(labels, counts) {
+        function generateBarChart(labels, counts, colors) {
             const barCtx = document.getElementById('barChart').getContext('2d');
             new Chart(barCtx, {
                 type: 'bar',
@@ -100,7 +95,7 @@
                     datasets: [{
                         label: 'Number of Transposable Elements by Family',
                         data: counts,
-                        backgroundColor: 'skyblue'
+                        backgroundColor: colors
                     }]
                 },
                 options: {
@@ -129,7 +124,7 @@
             });
         }
 
-        function generatePieChart(labels, counts) {
+        function generatePieChart(labels, counts, colors) {
             const pieCtx = document.getElementById('pieChart').getContext('2d');
             new Chart(pieCtx, {
                 type: 'pie',
@@ -137,7 +132,7 @@
                     labels: labels,
                     datasets: [{
                         data: counts,
-                        backgroundColor: labels.map(() => getRandomColor())
+                        backgroundColor: colors
                     }]
                 },
                 options: {
@@ -155,13 +150,15 @@
             });
         }
 
-        function getRandomColor() {
-            const letters = '0123456789ABCDEF';
-            let color = '#';
-            for (let i = 0; i < 6; i++) {
-                color += letters[Math.floor(Math.random() * 16)];
+        function generateColors(length) {
+            const colors = [];
+            const baseColors = [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'
+            ];
+            for (let i = 0; i < length; i++) {
+                colors.push(baseColors[i % baseColors.length]);
             }
-            return color;
+            return colors;
         }
     </script>
 </body>
