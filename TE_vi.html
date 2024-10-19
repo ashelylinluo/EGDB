@@ -6,6 +6,9 @@
     <title>TE Superfamilies and Families Visualization</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.25/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+    <script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -28,6 +31,15 @@
         #pieChart {
             height: 800px !important;
         }
+        .dataTables_wrapper {
+            overflow-x: auto;
+            margin-top: 40px;
+        }
+        table {
+            width: 100%;
+            table-layout: auto;
+            word-wrap: break-word;
+        }
     </style>
 </head>
 <body>
@@ -35,12 +47,12 @@
     <div id="selection-container">
         <label for="species-select">Choose a species:</label>
         <select id="species-select">
-            <option value="setaria_viridis_pie.csv">Setaria viridis</option>
-            <option value="miscanthus_sinensis_pie.csv">Miscanthus sinensis</option>
-            <option value="miscanthus_lutarioriparius_pie.csv">Miscanthus lutarioriparius</option>
-            <option value="cenchrus_purpureus_pie.csv">Cenchrus purpureus</option>
-            <option value="cenchrus_fungigraminus_pie.csv">Cenchrus fungigraminus</option>
-            <option value="cenchrus_purpureus_purple_pie.csv">Cenchrus purpureus Purple</option>
+            <option value="Setaria_viridis_pie.csv">Setaria viridis</option>
+            <option value="Miscanthus_sinensis_pie.csv">Miscanthus sinensis</option>
+            <option value="Miscanthus_lutarioriparius_pie.csv">Miscanthus lutarioriparius</option>
+            <option value="Cenchrus_purpureus_pie.csv">Cenchrus purpureus</option>
+            <option value="Cenchrus_fungigraminus_pie.csv">Cenchrus fungigraminus</option>
+            <option value="Cenchrus_purpureus_purple_pie.csv">Cenchrus purpureus Purple</option>
         </select>
         <button onclick="loadCharts()">Show Charts</button>
     </div>
@@ -51,6 +63,42 @@
         <div class="chart-wrapper">
             <canvas id="pieChart"></canvas>
         </div>
+    </div>
+
+    <h2>TE Search</h2>
+    <form id="search-form">
+        Select Species:
+        <select id="species-search-select">
+            <option value="Cenchrus_purpureus_purple.TE.csv">Cenchrus purpureus purple</option>
+            <option value="Cenchrus_purpureus.TE.csv">Cenchrus purpureus</option>
+            <option value="Cenchrus_fungigraminus.TE.csv">Cenchrus fungigraminus</option>
+            <option value="Miscanthus_lutarioriparius.TE.csv">Miscanthus lutarioriparius</option>
+            <option value="Miscanthus_sinensis.TE.csv">Miscanthus sinensis</option>
+            <option value="Setaria_viridis.TE.csv">Setaria viridis</option>
+        </select>
+        <br><br>
+        Region (e.g., 57000-57250): <input type="text" id="region" placeholder="Enter region">
+        TE Family (e.g., CACTA): <input type="text" id="family" placeholder="Enter TE family">
+        <button type="button" onclick="searchTE()">Search</button>
+    </form>
+
+    <div id="results-container" class="dataTables_wrapper">
+        <table id="teInformationTable" class="display">
+            <thead>
+                <tr>
+                    <th>chr</th>
+                    <th>start</th>
+                    <th>end</th>
+                    <th>information</th>
+                    <th>phase</th>
+                    <th>strand</th>
+                    <th>TE family</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Results will be dynamically added here -->
+            </tbody>
+        </table>
     </div>
 
     <script>
@@ -188,6 +236,65 @@
                 colors.push(baseColors[i % baseColors.length]);
             }
             return colors;
+        }
+
+        function searchTE() {
+            const species = document.getElementById('species-search-select').value;
+            const region = document.getElementById('region').value;
+            const family = document.getElementById('family').value;
+            const filePath = "./" + species;
+
+            Papa.parse(filePath, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    console.log("CSV data loaded for TE search:", results);
+
+                    if (results.errors.length > 0) {
+                        console.error("Errors parsing CSV:", results.errors);
+                        alert("Errors occurred while parsing the CSV file. Check the console for details.");
+                        return;
+                    }
+
+                    let data = results.data;
+                    if (region) {
+                        const [startRange, endRange] = region.split('-').map(Number);
+                        data = data.filter(row => {
+                            const start = parseInt(row['start'], 10);
+                            const end = parseInt(row['end'], 10);
+                            return start >= startRange && end <= endRange;
+                        });
+                    }
+                    if (family) {
+                        data = data.filter(row => row['TE family'] && row['TE family'].toLowerCase().includes(family.toLowerCase()));
+                    }
+
+                    const resultsTable = document.getElementById('teInformationTable').getElementsByTagName('tbody')[0];
+                    resultsTable.innerHTML = "";
+                    data.forEach(row => {
+                        const tr = document.createElement('tr');
+                        Object.values(row).forEach(value => {
+                            const td = document.createElement('td');
+                            td.textContent = value;
+                            tr.appendChild(td);
+                        });
+                        resultsTable.appendChild(tr);
+                    });
+                    $('#teInformationTable').DataTable({
+                        "pageLength": 10,
+                        "paging": true,
+                        "lengthMenu": [10, 20, 50],
+                        "processing": true,
+                        "deferRender": true,
+                        "retrieve": true
+                    }).draw();
+                },
+                error: function(error) {
+                    console.error("Error parsing CSV file:", error);
+                    alert("Error parsing CSV file. Please check the file path and content.");
+                }
+            });
         }
     </script>
 </body>
