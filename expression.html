@@ -22,13 +22,6 @@
             top: 0;
             left: 0;
         }
-        .sidebar { 
-            width: 250px; 
-            padding: 10px; 
-            background-color: #f4f4f4; 
-            overflow-y: auto;
-            flex-shrink: 0;
-        }
         .visualization { 
             flex: 1; 
             display: flex; 
@@ -48,16 +41,6 @@
 </head>
 <body>
     <div class="container">
-        <aside class="sidebar">
-            <h3>Control Panel</h3>
-            <label>Number of Genes:</label>
-            <input type="number" id="gene-count" value="20" min="1" max="200"><br><br>
-
-            <label>Correlation Threshold:</label>
-            <input type="range" id="correlation-threshold" min="0.5" max="1" step="0.01" value="0.8">
-            <span id="threshold-value">0.8</span><br><br>
-        </aside>
-
         <main class="visualization">
             <div id="heatmap" class="chart-container"></div>
             <div id="network-container" class="chart-container"></div>
@@ -67,20 +50,15 @@
     <script>
         const csvFilePath = "./Miscanthus_sacchariflorus.csv";
 
-        document.getElementById('correlation-threshold').addEventListener('input', (event) => {
-            document.getElementById('threshold-value').textContent = event.target.value;
-        });
-
         Papa.parse(csvFilePath, {
             download: true,
             header: true,
             complete: function(results) {
                 const data = results.data;
-                const geneCount = parseInt(document.getElementById('gene-count').value, 10);
 
                 const topGenes = data.sort((a, b) => 
                     averageExpression(b) - averageExpression(a)
-                ).slice(0, geneCount);
+                ).slice(0, 20); // 限制为20个基因
 
                 const labels = Object.keys(topGenes[0]).slice(1);
                 const geneIds = topGenes.map(row => row.gene_id);
@@ -113,12 +91,12 @@
                     [1, 'rgb(0, 0, 128)']
                 ],
                 colorbar: {
-                    len: 0.15,  // 更小的图例长度，原来是0.3
-                    thickness: 8,  // 更窄的图例宽度
-                    tickfont: { size: 8 },  // 更小的刻度字体
+                    len: 0.15,
+                    thickness: 8,
+                    tickfont: { size: 8 },
                     title: {
                         text: 'log2(TPM+1)',
-                        font: { size: 8 }  // 更小的标题字体
+                        font: { size: 8 }
                     }
                 }
             }];
@@ -126,10 +104,9 @@
             const layout = {
                 title: 'Top Genes Heatmap (log2 transformed)',
                 xaxis: { title: 'Samples' },
-                yaxis: { title: 'Genes' },
-                margin: { t: 50, r: 30, b: 50, l: 150 },  // 减小右边距
-                width: null,  // 自适应宽度
-                height: null  // 自适应高度
+                yaxis: { title: 'Genes', automargin: true },
+                margin: { t: 50, r: 30, b: 50, l: 200 }, // 增大左边距，避免标签裁剪
+                height: 800 // 增大热图高度
             };
 
             const config = {
@@ -141,15 +118,13 @@
 
         function drawNetwork(geneIds, expressionData) {
             const elements = geneIds.map(id => ({ data: { id } }));
-            const threshold = parseFloat(document.getElementById('correlation-threshold').value);
-
             const degrees = {};
 
             for (let i = 0; i < geneIds.length; i++) {
                 degrees[geneIds[i]] = 0;
                 for (let j = i + 1; j < geneIds.length; j++) {
                     const corr = pearsonCorrelation(expressionData[i], expressionData[j]);
-                    if (corr >= threshold) {
+                    if (corr >= 0.8) {
                         elements.push({ data: { source: geneIds[i], target: geneIds[j] } });
                         degrees[geneIds[i]]++;
                         degrees[geneIds[j]]++;
