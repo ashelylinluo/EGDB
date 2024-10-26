@@ -16,11 +16,16 @@
         }
         .container { 
             display: flex; 
+            flex-direction: column;
             width: 100%;
             height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
+        }
+        .header {
+            background-color: #f4f4f4;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         .visualization { 
             flex: 1; 
@@ -41,6 +46,20 @@
 </head>
 <body>
     <div class="container">
+        <header class="header">
+            <label for="species-select">Select Species:</label>
+            <select id="species-select">
+                <option value="Arundo_donax.csv">Arundo donax</option>
+                <option value="Cenchrus_fungigraminus.csv">Cenchrus fungigraminus</option>
+                <option value="Cenchrus_purpureus.csv">Cenchrus purpureus</option>
+                <option value="Cenchrus_purpureus_purple.csv">Cenchrus purpureus purple</option>
+                <option value="Miscanthus_lutarioriparius.csv">Miscanthus lutarioriparius</option>
+                <option value="Miscanthus_sacchariflorus.csv" selected>Miscanthus sacchariflorus</option>
+                <option value="Miscanthus_sinensis.csv">Miscanthus sinensis</option>
+                <option value="Setaria_viridis.csv">Setaria viridis</option>
+            </select>
+        </header>
+
         <main class="visualization">
             <div id="heatmap" class="chart-container"></div>
             <div id="network-container" class="chart-container"></div>
@@ -48,28 +67,32 @@
     </div>
 
     <script>
-        const csvFilePath = "./Miscanthus_sacchariflorus.csv";
+        const speciesSelect = document.getElementById('species-select');
+        speciesSelect.addEventListener('change', loadSpeciesData);
 
-        Papa.parse(csvFilePath, {
-            download: true,
-            header: true,
-            complete: function(results) {
-                const data = results.data;
+        function loadSpeciesData() {
+            const selectedSpecies = speciesSelect.value;
+            Papa.parse(`./${selectedSpecies}`, {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    const data = results.data;
 
-                const topGenes = data.sort((a, b) => 
-                    averageExpression(b) - averageExpression(a)
-                ).slice(0, 20); // 限制为20个基因
+                    const topGenes = data.sort((a, b) => 
+                        averageExpression(b) - averageExpression(a)
+                    ).slice(0, 20); // 限制为20个基因
 
-                const labels = Object.keys(topGenes[0]).slice(1);
-                const geneIds = topGenes.map(row => row.gene_id);
-                const expressionData = topGenes.map(row => 
-                    Object.values(row).slice(1).map(v => log2Transform(Number(v)))
-                );
+                    const labels = Object.keys(topGenes[0]).slice(1);
+                    const geneIds = topGenes.map(row => row.gene_id);
+                    const expressionData = topGenes.map(row => 
+                        Object.values(row).slice(1).map(v => log2Transform(Number(v)))
+                    );
 
-                drawHeatmap(labels, geneIds, expressionData);
-                drawNetwork(geneIds, expressionData);
-            }
-        });
+                    drawHeatmap(labels, geneIds, expressionData);
+                    drawNetwork(geneIds, expressionData);
+                }
+            });
+        }
 
         function averageExpression(gene) {
             const values = Object.values(gene).slice(1).map(Number);
@@ -105,14 +128,11 @@
                 title: 'Top Genes Heatmap (log2 transformed)',
                 xaxis: { title: 'Samples' },
                 yaxis: { title: 'Genes', automargin: true },
-                margin: { t: 50, r: 30, b: 50, l: 200 }, // 增大左边距，避免标签裁剪
-                height: 800 // 增大热图高度
+                margin: { t: 50, r: 30, b: 50, l: 200 },
+                height: 800
             };
 
-            const config = {
-                responsive: true
-            };
-
+            const config = { responsive: true };
             Plotly.newPlot('heatmap', data, layout, config);
         }
 
@@ -155,6 +175,9 @@
             const sumY2 = y.reduce((a, b) => a + b ** 2, 0);
             return (n * sumXY - sumX * sumY) / Math.sqrt((n * sumX2 - sumX ** 2) * (n * sumY2 - sumY ** 2));
         }
+
+        // 初始加载第一个物种数据
+        loadSpeciesData();
     </script>
 </body>
 </html>
