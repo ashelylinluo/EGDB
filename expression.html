@@ -37,11 +37,37 @@
         }
         .chart-container { 
             border: 1px solid #ddd; 
-            height: calc(50vh - 20px);
-            min-height: 300px;
+            height: calc(33vh - 20px);
+            min-height: 250px;
         }
         #heatmap { width: 100%; }
         #network-container { width: 100%; }
+        #gene-search-panel { width: 100%; }
+        .search-container {
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+        }
+        .search-input {
+            width: 200px;
+            padding: 5px;
+            margin-right: 10px;
+        }
+        .search-button {
+            padding: 5px 10px;
+            background-color: #0074D9;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .search-button:hover {
+            background-color: #0056b3;
+        }
+        #gene-expression-plot {
+            width: 100%;
+            height: 100%;
+        }
     </style>
 </head>
 <body>
@@ -58,29 +84,40 @@
                 <option value="Miscanthus_sinensis.csv">Miscanthus sinensis</option>
                 <option value="Setaria_viridis.csv">Setaria viridis</option>
             </select>
+            <div class="search-container">
+                <input type="text" id="gene-search" class="search-input" placeholder="Enter gene ID...">
+                <button id="search-button" class="search-button">Search Gene</button>
+            </div>
         </header>
 
         <main class="visualization">
             <div id="heatmap" class="chart-container"></div>
             <div id="network-container" class="chart-container"></div>
+            <div id="gene-search-panel" class="chart-container">
+                <div id="gene-expression-plot"></div>
+            </div>
         </main>
     </div>
 
     <script>
+        let currentData = null;
         const speciesSelect = document.getElementById('species-select');
+        const geneSearchInput = document.getElementById('gene-search');
+        const searchButton = document.getElementById('search-button');
+        
         speciesSelect.addEventListener('change', loadSpeciesData);
-
+        searchButton.addEventListener('click', searchGene);
+        
         function loadSpeciesData() {
             const selectedSpecies = speciesSelect.value;
             Papa.parse(`./${selectedSpecies}`, {
                 download: true,
                 header: true,
                 complete: function(results) {
-                    const data = results.data;
-
-                    const topGenes = data.sort((a, b) => 
+                    currentData = results.data;
+                    const topGenes = currentData.sort((a, b) => 
                         averageExpression(b) - averageExpression(a)
-                    ).slice(0, 20); // 限制为20个基因
+                    ).slice(0, 20);
 
                     const labels = Object.keys(topGenes[0]).slice(1);
                     const geneIds = topGenes.map(row => row.gene_id);
@@ -92,6 +129,49 @@
                     drawNetwork(geneIds, expressionData);
                 }
             });
+        }
+
+        function searchGene() {
+            const searchTerm = geneSearchInput.value.trim();
+            if (!searchTerm || !currentData) return;
+
+            const geneData = currentData.find(row => row.gene_id.includes(searchTerm));
+            if (geneData) {
+                const tissues = Object.keys(geneData).slice(1);
+                const expressionValues = tissues.map(tissue => Number(geneData[tissue]));
+                
+                const trace = {
+                    x: tissues,
+                    y: expressionValues,
+                    type: 'bar',
+                    name: geneData.gene_id,
+                    marker: {
+                        color: '#0074D9'
+                    }
+                };
+
+                const layout = {
+                    title: `Expression Profile for ${geneData.gene_id}`,
+                    xaxis: {
+                        title: 'Tissues',
+                        tickangle: -45
+                    },
+                    yaxis: {
+                        title: 'Expression Level (TPM)'
+                    },
+                    margin: {
+                        b: 150
+                    }
+                };
+
+                const config = {
+                    responsive: true
+                };
+
+                Plotly.newPlot('gene-expression-plot', [trace], layout, config);
+            } else {
+                alert('Gene not found!');
+            }
         }
 
         function averageExpression(gene) {
@@ -126,13 +206,37 @@
 
             const layout = {
                 title: 'Top Genes Heatmap (log2 transformed)',
-                xaxis: { title: 'Samples' },
-                yaxis: { title: 'Genes', automargin: true },
-                margin: { t: 50, r: 30, b: 50, l: 200 },
-                height: 800
+                xaxis: {
+                    title: 'Samples',
+                    tickangle: -45,
+                    tickfont: {
+                        size: 10
+                    },
+                    automargin: true
+                },
+                yaxis: {
+                    title: 'Genes',
+                    automargin: true
+                },
+                margin: {
+                    t: 50,
+                    r: 30,
+                    b: 150,
+                    l: 200
+                }
             };
 
-            const config = { responsive: true };
+            const config = { 
+                responsive: true,
+                toImageButtonOptions: {
+                    format: 'svg',
+                    filename: 'gene_expression_heatmap',
+                    height: 800,
+                    width: 1200,
+                    scale: 1
+                }
+            };
+            
             Plotly.newPlot('heatmap', data, layout, config);
         }
 
@@ -176,7 +280,7 @@
             return (n * sumXY - sumX * sumY) / Math.sqrt((n * sumX2 - sumX ** 2) * (n * sumY2 - sumY ** 2));
         }
 
-        // 初始加载第一个物种数据
+        // Initial load
         loadSpeciesData();
     </script>
 </body>
