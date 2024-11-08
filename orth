@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orthogroup Search Interface</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+    <style>
+        .sidebar {
+            height: 100vh;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+        .main-content {
+            padding: 20px;
+        }
+        .chart-container {
+            height: 500px;
+            margin-bottom: 30px;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .gene-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .data-paths {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Left Sidebar -->
+            <div class="col-md-3 sidebar">
+                <h3 class="mb-4">Orthogroup Search</h3>
+                
+                <!-- Data Paths Info -->
+                <div class="data-paths mb-4">
+                    <small>
+                        <div>Gene Count: D:\20240222数据库\20241108gene_family\Orthogroups.GeneCount.tsv</div>
+                        <div>Orthogroups: D:\20240222数据库\20241108gene_family\Orthogroups.tsv</div>
+                        <div>Tree Files: H:\Results_Nov07\Gene_Trees</div>
+                    </small>
+                </div>
+
+                <!-- Search Area -->
+                <div class="mb-4">
+                    <label for="orthogroupInput" class="form-label">Orthogroup ID</label>
+                    <div class="input-group">
+                        <input type="text" id="orthogroupInput" class="form-control" placeholder="e.g., OG0000000">
+                        <button id="searchButton" class="btn btn-primary">Search</button>
+                    </div>
+                    <button id="demoButton" class="btn btn-secondary mt-2 w-100">Load Demo (OG0000000)</button>
+                </div>
+
+                <!-- Tree File Download -->
+                <div class="mb-4">
+                    <h5>Tree File</h5>
+                    <button id="downloadTreeButton" class="btn btn-outline-primary w-100" disabled>
+                        Download Tree File
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Main Content Area -->
+            <div class="col-md-9 main-content">
+                <!-- Result Overview -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h4 class="card-title">Result Overview</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-2">Orthogroup ID: <strong id="orthogroupIDDisplay">-</strong></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-2">Total Genes: <strong id="totalGenes">-</strong></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Table -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h4 class="card-title">Search Result</h4>
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="geneTable">
+                                <thead>
+                                    <tr>
+                                        <th>Species Name</th>
+                                        <th>Gene Count</th>
+                                        <th>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="chart-container" id="barChart"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="chart-container" id="pieChart"></div>
+                    </div>
+                </div>
+
+                <!-- Gene List -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h4 class="card-title">Detailed Gene List</h4>
+                        <div id="geneList" class="gene-list">
+                            <!-- Gene lists will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Options -->
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">Export Options</h4>
+                        <button id="exportCSVButton" class="btn btn-success me-2">Export as CSV</button>
+                        <button id="exportExcelButton" class="btn btn-success">Export as Excel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    <script>
+        // Global variables
+        let currentOrthogroup = '';
+        let geneData = null;
+
+        // Initialize charts
+        const barChart = echarts.init(document.getElementById('barChart'));
+        const pieChart = echarts.init(document.getElementById('pieChart'));
+
+        // Function to remove .pep suffix
+        function cleanSpeciesName(name) {
+            return name.replace('.pep', '');
+        }
+
+        // Function to load data from TSV file
+        async function loadOrthogroupData(orthogroupId) {
+            try {
+                // In a real implementation, this would be an API call or file read
+                // For now, simulate different data for different orthogroup IDs
+                let data;
+                if (orthogroupId === 'OG0000001') {
+                    data = {
+                        'Cenchrus_purpureus_purple.pep': 3,
+                        'Cenchrus_purpureus.pep': 2,
+                        'Cenchrus_fungigraminus.pep': 4,
+                        'Miscanthus_lutarioriparius.pep': 2,
+                        'Miscanthus_floridulus.pep': 3,
+                        'Msinensis_497.pep': 2,
+                        'Setaria_viridis.pep': 1,
+                        'Phragmites_australis.pep': 2,
+                        'Pearlmillet.pep': 3
+                    };
+                } else {
+                    // Default demo data for other IDs
+                    data = {
+                        'Cenchrus_purpureus_purple.pep': 2,
+                        'Cenchrus_purpureus.pep': 3,
+                        'Cenchrus_fungigraminus.pep': 2,
+                        'Miscanthus_lutarioriparius.pep': 4,
+                        'Miscanthus_floridulus.pep': 1,
+                        'Msinensis_497.pep': 3,
+                        'Setaria_viridis.pep': 2,
+                        'Phragmites_australis.pep': 3,
+                        'Pearlmillet.pep': 2
+                    };
+                }
+                // Clean species names by removing .pep suffix
+                const cleanedData = {};
+                Object.entries(data).forEach(([key, value]) => {
+                    cleanedData[cleanSpeciesName(key)] = value;
+                });
+                return cleanedData;
+            } catch (error) {
+                console.error('Error loading data:', error);
+                return null;
+            }
+        }
+
+        // Function to update visualizations
+        function updateVisualizations(data) {
+            const species = Object.keys(data);
+            const counts = Object.values(data);
+            const total = counts.reduce((a, b) => a + b, 0);
+
+            // Update overview
+            $('#totalGenes').text(total);
+
+            // Update table
+            const tableBody = $('#geneTable tbody');
+            tableBody.empty();
+            species.forEach(specie => {
+                const count = data[specie];
+                const percentage = ((count / total) * 100).toFixed(1);
+                tableBody.append(`
+                    <tr>
+                        <td>${specie}</td>
+                        <td>${count}</td>
+                        <td>${percentage}%</td>
+                    </tr>
+                `);
+            });
+
+            // Update bar chart
+            barChart.setOption({
+                title: { 
+                    text: 'Gene Distribution by Species',
+                    left: 'center',
+                    top: 20
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    }
+                },
+                grid: {
+                    left: '10%',
+                    right: '10%',
+                    bottom: '20%',
+                    top: '15%',
+                    containLabel: true
+                },
+                xAxis: { 
+                    type: 'category',
+                    data: species,
+                    axisLabel: { 
+                        rotate: 45,
+                        interval: 0,
+                        formatter: function (value) {
+                            return value.length > 15 ? value.substring(0, 15) + '...' : value;
+                        }
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: 'Gene Count'
+                },
+                series: [{
+                    name: 'Gene Count',
+                    type: 'bar',
+                    data: counts,
+                    itemStyle: {
+                        color: '#5470c6'
+                    }
+                }]
+            });
+
+            // Update pie chart
+            pieChart.setOption({
+                title: { 
+                    text: 'Gene Distribution Percentage',
+                    left: 'center',
+                    top: 20
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{b}: {c} ({d}%)'
+                },
+                legend: {
+                    orient: 'vertical',
+                    left: 'left',
+                    top: 'middle',
+                    formatter: function(name) {
+                        return name.length > 15 ? name.substring(0, 15) + '...' : name;
+                    }
+                },
+                series: [{
+                    name: 'Gene Distribution',
+                    type: 'pie',
+                    radius: '50%',
+                    center: ['60%', '50%'],
+                    data: species.map((specie, index) => ({
+                        name: specie,
+                        value: counts[index]
+                    })),
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    }
+                }]
+            });
+        }
+
+        // Event handlers
+        $('#searchButton').click(async function() {
+            const orthogroupID = $('#orthogroupInput').val();
+            if (orthogroupID) {
+                currentOrthogroup = orthogroupID;
+                $('#orthogroupIDDisplay').text(orthogroupID);
+                $('#downloadTreeButton').prop('disabled', false);
+                
+                const data = await loadOrthogroupData(orthogroupID);
+                if (data) {
+                    updateVisualizations(data);
+                } else {
+                    alert('Error loading data for ' + orthogroupID);
+                }
+            }
+        });
+
+        // Allow Enter key to trigger search
+        $('#orthogroupInput').keypress(function(e) {
+            if (e.which === 13) {
+                $('#searchButton').click();
+            }
+        });
+
+        $('#demoButton').click(function() {
+            $('#orthogroupInput').val('OG0000000');
+            $('#searchButton').click();
+        });
+
+        $('#downloadTreeButton').click(function() {
+            if (currentOrthogroup) {
+                const treePath = `H:/Results_Nov07/Gene_Trees/${currentOrthogroup}_tree.txt`;
+                alert(`Download tree file from: ${treePath}`);
+            }
+        });
+
+        // Export buttons (demo functionality)
+        $('#exportCSVButton').click(function() {
+            alert('Export as CSV functionality would be implemented here');
+        });
+
+        $('#exportExcelButton').click(function() {
+            alert('Export as Excel functionality would be implemented here');
+        });
+
+        // Handle window resize for charts
+        window.addEventListener('resize', function() {
+            barChart.resize();
+            pieChart.resize();
+        });
+
+        // Initial resize to ensure proper rendering
+        setTimeout(function() {
+            barChart.resize();
+            pieChart.resize();
+        }, 100);
+    </script>
+</body>
+</html>
