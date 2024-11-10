@@ -1,0 +1,351 @@
+<!DOCTYPE html> <!-- 文档类型声明，指定 HTML5 版本 -->
+<html lang="en"> <!-- 设置页面语言为英文 -->
+<head>
+    <meta charset="UTF-8"> <!-- 设置字符编码为 UTF-8，确保支持多语言文本 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- 设置视口，确保页面在移动设备上显示良好 -->
+    <title>TE Superfamilies and Families Visualization</title> <!-- 页面标题，显示在浏览器标签栏 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- 引入 Chart.js 库，用于绘制图表 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script> <!-- 引入 PapaParse 库，用于解析 CSV 文件 -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.5/css/jquery.dataTables.min.css"> <!-- 引入 DataTables 样式文件 -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> <!-- 引入 jQuery 库 -->
+    <script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script> <!-- 引入 DataTables 库，用于表格处理 -->
+    <style>
+        /* 内联样式 */
+        body {
+            font-family: Arial, sans-serif; /* 设置字体 */
+            margin: 20px; /* 设置页面边距 */
+        }
+        #selection-container {
+            margin-bottom: 20px; /* 设置选择容器的下边距 */
+        }
+        #charts-container {
+            display: flex; /* 设置布局为弹性布局 */
+            justify-content: space-between; /* 图表之间均匀分布 */
+            align-items: flex-start; /* 图表顶部对齐 */
+        }
+        .chart-wrapper {
+            width: 48%; /* 每个图表容器的宽度 */
+        }
+        #barChart {
+            height: 750px !important; /* 柱状图高度 */
+        }
+        #pieChart {
+            height: 800px !important; /* 饼图高度 */
+        }
+        #download-button {
+            margin-top: 10px; /* 下载按钮上边距 */
+            padding: 10px 20px; /* 按钮内边距 */
+            background-color: #4CAF50; /* 按钮背景颜色 */
+            color: white; /* 按钮文字颜色 */
+            border: none; /* 去除按钮边框 */
+            cursor: pointer; /* 设置鼠标样式 */
+        }
+        #download-button:hover {
+            background-color: #45a049; /* 悬停时按钮背景颜色 */
+        }
+        .dataTables_wrapper {
+            margin-top: 20px; /* 表格容器上边距 */
+            overflow-x: auto; /* 允许横向滚动 */
+        }
+        /* 确保表格容器有足够的空间显示分页控件 */
+        #teInformationTable_wrapper {
+            margin-bottom: 50px; /* 设置表格容器底边距 */
+        }
+        /* 分页按钮样式 */
+        .dataTables_paginate {
+            margin-top: 10px !important; /* 分页控件上边距 */
+        }
+        /* 确保分页控件可见 */
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 0.5em 1em; /* 分页按钮内边距 */
+            margin-left: 2px; /* 分页按钮左边距 */
+        }
+        table {
+            width: 100%; /* 表格宽度 */
+            table-layout: auto; /* 自动布局 */
+            word-wrap: break-word; /* 允许文字换行 */
+        }
+    </style>
+</head>
+<body>
+    <h1>TE Annotation and Visualization</h1> <!-- 页面主标题 -->
+    <div id="selection-container">
+        <label for="species-select">Choose a species:</label> <!-- 选择物种的标签 -->
+        <select id="species-select"> <!-- 物种选择下拉菜单 -->
+            <option value="Setaria_viridis_pie.csv">Setaria viridis</option>
+            <option value="Miscanthus_sinensis_pie.csv">Miscanthus sinensis</option>
+            <option value="Miscanthus_lutarioriparius_pie.csv">Miscanthus lutarioriparius</option>
+            <option value="Cenchrus_purpureus_pie.csv">Cenchrus purpureus</option>
+            <option value="Cenchrus_fungigraminus_pie.csv">Cenchrus fungigraminus</option>
+            <option value="Cenchrus_purpureus_purple_pie.csv">Cenchrus purpureus Purple</option>
+        </select>
+        <button onclick="loadCharts()">Show Charts</button> <!-- 加载图表按钮 -->
+    </div>
+    <div id="charts-container">
+        <div class="chart-wrapper">
+            <canvas id="barChart"></canvas> <!-- 柱状图容器 -->
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="pieChart"></canvas> <!-- 饼图容器 -->
+        </div>
+    </div>
+<hr>
+    <h2>TE Search</h2> <!-- 搜索区域标题 -->
+    <form id="search-form">
+        Select Species:
+        <select id="species-search-select"> <!-- 搜索表单中的物种选择 -->
+            <option value="Cenchrus_purpureus_purple.TE.csv">Cenchrus purpureus purple</option>
+            <option value="Cenchrus_purpureus.TE.csv">Cenchrus purpureus</option>
+            <option value="Cenchrus_fungigraminus.TE.csv">Cenchrus fungigraminus</option>
+            <option value="Miscanthus_lutarioriparius.TE.csv">Miscanthus lutarioriparius</option>
+            <option value="Miscanthus_sinensis.TE.csv">Miscanthus sinensis</option>
+            <option value="Setaria_viridis.TE.csv">Setaria viridis</option>
+        </select>
+        <br><br>
+        Region (e.g., 57000-57250): <input type="text" id="region" placeholder="Enter region"> <!-- 区域输入框 -->
+        TE Family (e.g., CACTA): <input type="text" id="family" placeholder="Enter TE family"> <!-- TE 家族输入框 -->
+        <button type="button" onclick="searchTE()">Search</button> <!-- 搜索按钮 -->
+    </form>
+
+    <button id="download-button" onclick="downloadResults()">Download Results</button> <!-- 下载结果按钮 -->
+
+    <div class="dataTables_wrapper">
+        <table id="teInformationTable" class="display"> <!-- 数据表格 -->
+            <thead>
+                <tr>
+                    <th>chr</th> <!-- 染色体 -->
+                    <th>start</th> <!-- 起始位置 -->
+                    <th>end</th> <!-- 结束位置 -->
+                    <th>information</th> <!-- 信息 -->
+                    <th>phase</th> <!-- 相位 -->
+                    <th>strand</th> <!-- 链 -->
+                    <th>TE family</th> <!-- TE 家族 -->
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let barChartInstance = null;
+        let pieChartInstance = null;
+        let dataTable;
+
+        function loadCharts() { /* 加载图表函数 */
+            const speciesSelect = document.getElementById('species-select');
+            const filePath = "./" + speciesSelect.value;
+
+            Papa.parse(filePath, { /* 解析 CSV 文件 */
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    console.log("CSV data loaded:", results);
+
+                    if (results.errors.length > 0) {
+                        console.error("Errors parsing CSV:", results.errors);
+                        alert("Errors occurred while parsing the CSV file. Check the console for details.");
+                        return;
+                    }
+
+                    let data = results.data;
+                    data = data.map(row => ({ label: row['TE family'], count: parseInt(row['Count'], 10) }))
+                                .filter(row => !isNaN(row.count))
+                                .sort((a, b) => b.count - a.count);
+
+                    const labels = data.map(row => row.label);
+                    const counts = data.map(row => row.count);
+                    const colors = generateColors(labels.length);
+
+                    if (labels.length > 0 && counts.length > 0) {
+                        generateBarChart(labels, counts, colors);
+                        generatePieChart(labels, counts, colors);
+                    } else {
+                        console.error("No valid data found in CSV file.");
+                        alert("No valid data found in CSV file. Please check the file format and content.");
+                    }
+                }
+            });
+        }
+
+        function generateBarChart(labels, counts, colors) { /* 生成柱状图函数 */
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            if (barChartInstance) {
+                barChartInstance.destroy();
+            }
+            barChartInstance = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                   
+```html
+                    labels: labels, /* 设置柱状图的标签 */
+                    datasets: [{
+                        data: counts, /* 柱状图数据 */
+                        backgroundColor: colors /* 设置柱状图的颜色 */
+                    }]
+                },
+                options: {
+                    responsive: true, /* 响应式布局 */
+                    maintainAspectRatio: false, /* 禁用默认宽高比 */
+                    plugins: {
+                        legend: {
+                            display: false /* 隐藏图例 */
+                        },
+                        title: {
+                            display: true,
+                            text: 'Number of Transposable Elements by Family' /* 设置图表标题 */
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxRotation: 45, /* X轴标签的最大旋转角度 */
+                                minRotation: 45 /* X轴标签的最小旋转角度 */
+                            }
+                        },
+                        y: {
+                            beginAtZero: true /* Y轴从零开始 */
+                        }
+                    }
+                }
+            });
+        }
+
+        function generatePieChart(labels, counts, colors) { /* 生成饼图函数 */
+            const pieCtx = document.getElementById('pieChart').getContext('2d');
+            if (pieChartInstance) {
+                pieChartInstance.destroy(); /* 销毁之前的饼图实例，避免重叠 */
+            }
+            pieChartInstance = new Chart(pieCtx, {
+                type: 'pie',
+                data: {
+                    labels: labels, /* 饼图标签 */
+                    datasets: [{
+                        data: counts, /* 饼图数据 */
+                        backgroundColor: colors /* 饼图的颜色 */
+                    }]
+                },
+                options: {
+                    responsive: true, /* 响应式布局 */
+                    maintainAspectRatio: false, /* 禁用默认宽高比 */
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'right' /* 图例显示在右侧 */
+                        },
+                        title: {
+                            display: true,
+                            text: 'Proportion of Transposable Elements by Family' /* 设置图表标题 */
+                        }
+                    }
+                }
+            });
+        }
+
+        function generateColors(length) { /* 生成颜色函数 */
+            const colors = [];
+            const baseColors = [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'
+            ];
+            for (let i = 0; i < length; i++) {
+                colors.push(baseColors[i % baseColors.length]); /* 循环使用基本颜色 */
+            }
+            return colors;
+        }
+
+        function initializeDataTable(data) { /* 初始化 DataTable */
+            if (dataTable) {
+                dataTable.destroy(); /* 销毁之前的 DataTable 实例 */
+            }
+
+            const tableData = data.map(row => [
+                row.chr, /* 染色体数据 */
+                row.start, /* 起始位置 */
+                row.end, /* 结束位置 */
+                row.information, /* 信息 */
+                row.phase, /* 相位 */
+                row.strand, /* 链 */
+                row['TE family'] /* TE 家族 */
+            ]);
+
+            dataTable = $('#teInformationTable').DataTable({
+                data: tableData, /* 数据传入 DataTable */
+                pageLength: 10, /* 每页显示 10 条数据 */
+                lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                ordering: true, /* 启用排序 */
+                searching: true, /* 启用搜索 */
+                paging: true, /* 启用分页 */
+                info: true, /* 显示表格信息 */
+                dom: 'lBfrtip',
+                language: {
+                    paginate: {
+                        previous: "Previous", /* 上一页 */
+                        next: "Next" /* 下一页 */
+                    },
+                    lengthMenu: "Show _MENU_ entries", /* 每页显示条目 */
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries" /* 表格信息显示 */
+                }
+            });
+        }
+
+        function searchTE() { /* 搜索 TE 函数 */
+            const species = document.getElementById('species-search-select').value;
+            const region = document.getElementById('region').value;
+            const family = document.getElementById('family').value;
+            const filePath = "./" + species;
+
+            Papa.parse(filePath, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    let data = results.data;
+
+                    if (region) { /* 如果输入了区域，进行区域筛选 */
+                        const [startRange, endRange] = region.split('-').map(Number);
+                        data = data.filter(row => {
+                            const start = parseInt(row['start'], 10);
+                            const end = parseInt(row['end'], 10);
+                            return start >= startRange && end <= endRange;
+                        });
+                    }
+                    if (family) { /* 如果输入了 TE 家族，进行家族筛选 */
+                        data = data.filter(row => row['TE family'] && row['TE family'].toLowerCase().includes(family.toLowerCase()));
+                    }
+
+                    initializeDataTable(data); /* 更新表格内容 */
+                }
+            });
+        }
+
+        function downloadResults() { /* 下载搜索结果函数 */
+            if (!dataTable) {
+                alert('Please perform a search first.'); /* 如果没有搜索结果，提示用户 */
+                return;
+            }
+
+            const data = dataTable.rows({ search: 'applied' }).data().toArray(); /* 获取表格中的搜索数据 */
+            const headers = ['chr', 'start', 'end', 'information', 'phase', 'strand', 'TE family']; /* 表头 */
+            const csvContent = "data:text/csv;charset=utf-8,"
+                + headers.join(",") + "\n"
+                + data.map(row => row.join(",")).join("\n"); /* 转换为 CSV 格式 */
+
+            const encodedUri = encodeURI(csvContent); /* 编码 URI */
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "TE_Search_Results.csv"); /* 设置下载文件名 */
+            document.body.appendChild(link);
+            link.click(); /* 点击触发下载 */
+            document.body.removeChild(link); /* 下载后移除链接 */
+        }
+
+        // 页面加载完成后初始化空表格
+        $(document).ready(function() {
+            initializeDataTable([]); /* 初始化空的 DataTable */
+            loadCharts(); /* 自动加载初始图表 */
+        });
+    </script>
+</body>
+</html>
+```
