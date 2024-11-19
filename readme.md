@@ -63,9 +63,7 @@ git clone https://github.com/ashelylinluo/epigenetic-atlas
 cd EGDB
 ```
 
-## 🌟 Screenshots
-🌟 **Explore the Interface:**  
-[Your screenshots will be placed here]
+
 
 ## 💌 Contact Us
 - 👩‍🔬 **Research Team:** Transcriptional Systems Biology Group  
