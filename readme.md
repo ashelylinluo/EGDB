@@ -1,4 +1,4 @@
-# 🌱 The Energy Grass Database (EGDB) 🌾
+# 🌱 The Energy Grass Database (EGDB) : A Comprehensive Multi-Omics Database for Energy Grasses and the Epigenomic Atlas of Pearl Millet 🌾
 
 ## 🌟 Introduction
 Welcome to **[The Energy Grass Database (EGDB)](https://engrass.juncaodb.cn/)**! 🎉  
