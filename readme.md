@@ -14,7 +14,13 @@ Energy grasses are champions of renewable energy 🌍, offering incredible poten
 ### 🔎 1. Species Browser
 Dive into species-specific data with:  
 - 🌿 **Detailed genome sequences and annotations**  
-- 📜 **Comprehensive literature and data resources**  
+- 📜 **Comprehensive literature and data resources**
+-  Data Sources
+
+This database incorporates species distribution data from GBIF (Global Biodiversity Information Facility).
+
+Citation:
+GBIF.org (2024) GBIF Derived Dataset https://doi.org/10.15468/dd.s7v5s6
 
 ### 💡 2. Advanced Search Tools
 Easily find the data you need:  
